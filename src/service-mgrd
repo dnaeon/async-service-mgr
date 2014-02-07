@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+
+"""
+Service Manager daemon
+
+"""
+
+import json
+import logging
+import ConfigParser
+
+from docopt import docopt
+from service.manager import ServiceManager
+from service.client import ServiceManagerClient
+
+def start(pidfile, daemon, **kwargs):
+    """
+    Start the Service Manager daemon
+
+    Args:
+        pidfile (string): Location to the daemon's pidfile
+        daemon    (bool): If True daemonize the Service Manager
+
+    """
+    manager = ServiceManager(pidfile)
+
+    if daemon:
+        # Run as daemon
+        manager.start(**kwargs)
+    else:
+        # Run in the foreground
+        manager.run(**kwargs)
+
+def stop(endpoint):
+    """
+    Stops the Service Manager daemon
+
+    Args:
+        endpoint (string): The endpoint we send the shutdown message to
+
+    """
+    # The message we send to initiate the shutdown sequence
+    msg = { "method": "manager.shutdown" }
+
+    # Send out our message
+    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
+    result = client.run(msg)
+
+    return result
+
+def status(endpoint):
+    """
+    Get status information from the Service Manager daemon
+
+    Args:
+        endpoint (string): The endpoint we send the status request to
+    
+    """
+    # The message we send to get status information
+    msg = { "method": "manager.status" }
+
+    # Send out our message
+    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
+    result = client.run(msg)
+
+    return result
+
+def parse_conf(path):
+    """
+    Parses the Service Manager configuration file
+
+    Args:
+        path (str): Path to the Service Manager conf file
+
+    Returns:
+        A dict of the Service Manager config options
+
+    """
+    parser = ConfigParser.ConfigParser()
+    parser.read(path)
+
+    required_opts = ('frontend_endpoint',
+                     'backend_endpoint',
+                     'sink_endpoint',
+                     'mgmt_endpoint')
+
+    if not all(parser.has_option('Default', opt) for opt in required_opts):
+        raise SystemExit, 'Missing or no configuration options in %s' % path
+
+    return dict(parser.items('Default'))
+
+def main():
+    usage="""
+Usage: service-mgrd [-d] [-p <pidfile>] [-f <config-file>] [-o <logfile>] start
+       service-mgrd -e <endpoint> stop
+       service-mgrd -e <endpoint> status
+       service-mgrd --help
+       service-mgrd --version
+
+Arguments:
+  start                                     Start the Service Manager
+  stop                                      Stop the Service Manager
+  status                                    Get status information
+
+Options:
+  -h, --help                                Display this usage info
+  -v, --version                             Display version and exit
+  -d, --daemon                              Start as a daemon, otherwise
+                                            run in the foreground
+  -p <pidfile>, --pidfile <pidfile>         Specify pidfile file to use
+                                            [default: /var/run/service-mgr/service-mgrd.pid]
+  -f <config-file>, --file <config-file>    Specify config file to use
+                                            [default: /etc/service-mgr/service-mgrd.conf]
+  -e <endpoint>, --endpoint <endpoint>      Specify the endpoint we connect to
+  -o <logfile>, --output <logfile>          Specify the logfile to use
+                                            [default: /var/log/service-mgr/service-mgrd.log]
+
+"""
+
+    args = docopt(usage, version="0.1.0")
+
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgrd[%(process)s]: %(message)s',
+                        level=logging.DEBUG)
+
+    conf_options = parse_conf(args['--file'])
+
+    result = None
+        
+    if args["start"]:
+        start(args["--pidfile"], args["--daemon"], **conf_options)
+    elif args["stop"]:
+        result = stop(args["--endpoint"])
+    elif args["status"]:
+        result = status(args["--endpoint"])
+
+    if result:
+        print json.dumps(result, indent=4)
+        
+if __name__ == '__main__':
+    main()
+
