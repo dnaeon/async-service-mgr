@@ -49,27 +49,33 @@ class ServiceManager(Daemon):
                 _empty = self.frontend_socket.recv()
                 msg    = self.frontend_socket.recv_json()
 
-                self.backend_socket.send(msg)
+                logging.debug('ID: %s' % _id)
+                logging.debug('Message: %s' % msg)
+
+                self.backend_socket.send_json(msg)
 
             # Backend socket, agents are subscribing to it
             if socks.get(self.backend_socket):
                 logging.debug('Received message on the backend socket')
 
                 msg = self.backend_socket.recv()
+                topic = 'any' if not msg[1:] else msg[1:]
                 if msg[0] == '\x01':
-                    logging.debug('Agent subscribed')
+                    logging.debug('Agent subscribed to topic: %s' % topic)
                 elif msg[0] == '\x00':
-                    logging.debug('Agent unsubscribed')
+                    logging.debug('Agent unsubscribed from topic: %s' % topic)
 
             # Sink socket
             if socks.get(self.sink_socket):
                 logging.debug('Received message on the sink socket')
                 msg = self.sink_socket.recv_json()
+                logging.debug('Message: %s' % msg)
 
             # Management socket
             if socks.get(self.mgmt_socket):
                 logging.debug('Received message on the management socket')
                 msg = self.mgmt_socket.recv_json()
+                logging.debug('Message: %s' % msg)
 
         # Shutdown time has arrived, let's cleanup a bit here
         logging.info('Service Manager is shutting down')
