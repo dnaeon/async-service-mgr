@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+"""
+Service Manager Client application
+
+"""
+
+import json
+import logging
+
+from docopt import docopt
+from service.client import ServiceManagerClient
+
+def main():
+
+    usage="""
+Usage:
+  service-mgr-client [-r <retries>] [-t <timeout>] -e <endpoint> -T <topic> -c <cmd> -s <service>
+  service-mgr-client --help
+  service-mgr-client --version
+
+Options:
+  -h, --help                                  Display this usage info
+  -v, --version                               Display version and exit
+  -r <retries>, --retries <retries>           Number of times to retry if a request times out 
+                                              [default: 3]
+  -t <timeout>, --timeout <timeout>           Timeout after that period of milliseconds 
+                                              [default: 3000]
+  -e <endpoint>, --endpoint <endpoint>        Endpoint of Service Manager to send the request to
+                                              [default: tcp://localhost:10123]
+  -T <topic>, --topic <topic>                 Topic of the message
+  -c <cmd>, --cmd <cmd>                       Service command, e.g. 'service.status', 'service.stop', etc.
+  -s <service>, --service <service>           Name of the service
+
+"""
+
+    args = docopt(usage, version="0.1.0")
+
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgr-client[%(process)s]: %(message)s',
+                        level=logging.DEBUG)
+
+    client = ServiceManagerClient(endpoint=args["--endpoint"],
+                                  retries=int(args["--retries"]),
+                                  timeout=int(args["--timeout"]))
+
+    # Message we send out to workers
+    msg = {
+        'cmd':     args['--cmd'],
+        'topic':   args['--topic'],
+        'service': args['--service'],
+    }
+    
+    # Get the result
+    data = client.run(msg)
+    result = json.dumps(data, indent=4)
+    
+    print result
+
+if __name__ == '__main__':
+    main()
+
