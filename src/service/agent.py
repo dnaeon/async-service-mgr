@@ -8,12 +8,13 @@ import logging
 
 import zmq
 
+from service.core import Service
 from service.core import ServiceManagerException
 from service.daemon import Daemon
 
 class ServiceManagerAgent(Daemon):
     """
-    Service Manager Agent
+    Service Manager Agent class
 
     Extends:
         Daemon class
@@ -32,19 +33,43 @@ class ServiceManagerAgent(Daemon):
         while not self.time_to_die:
             socks = dict(self.zpoller.poll())
 
-            # Subscriber socket, process new request message
+            # Subscriber socket, receives new service request messages
             if socks.get(self.sub_socket):
                 logging.debug('Received new message on the subscriber socket')
+
+                # The routing envelope of the message is like this:
+                #
+                # Frame 1:  [ N ][...]  <- Identity of connection
+                # Frame 2:  [ 0 ][]     <- Empty delimiter frame
+                # Frame 3:  [ N ][...]  <- Data frame
+                #
+                # We keep the identity of the connection similar to a ROUTER socket,
+                # so later when we send results back to the sink the manager can
+                # forward the results properly to the clients
+                _id = self.sub_socket.recv()
+                _empty = self.sub_socket.recv()
                 msg = self.sub_socket.recv_json()
-                logging.debug('Message: %s' % msg)
                 
-                self.sink_socket.send_json(msg)
+                logging.debug('Message: %s' % msg)
+
+                result = self.process_service_req(msg)
+
+                # Send back the results to the sink
+                self.sink_socket.send(_id, zmq.SNDMORE)
+                self.sink_socket.send("", zmq.SNDMORE)
+                self.sink_socket.send_json(result)
             
             # Management socket
             if socks.get(self.mgmt_socket):
                 logging.debug('Received new message on the management socket')
+                
                 msg = self.mgmt_socket.recv_json()
+                
                 logging.debug('Message: %s' % msg)
+
+                result = self.process_mgmt_req(msg)
+                
+                self.mgmt_socket.send_json(result)
 
         # Shutdown time has arrived, let's cleanup a bit here
         self.close_sockets()
@@ -55,6 +80,8 @@ class ServiceManagerAgent(Daemon):
         Creates the Service Manager Agent sockets
 
         """
+        logging.debug('Creating Service Manager Agent sockets')
+
         required_args = (
             'manager_endpoint',
             'sink_endpoint',
@@ -63,8 +90,6 @@ class ServiceManagerAgent(Daemon):
 
         if not all(k in kwargs for k in required_args):
             raise ServiceManagerException, 'Missing socket endpoints, e.g. manager/sink/mgmt'
-
-        logging.debug('Creating Service Manager Agent sockets')
 
         for k in kwargs:
             setattr(self, k, kwargs[k])
@@ -107,4 +132,51 @@ class ServiceManagerAgent(Daemon):
         self.mgmt_socket.close()
 
         self.zcontext.destroy()
+
+    def process_service_req(self, msg):
+        """
+        Processes a service request 
+
+        """
+        logging.debug('Processing service request')
+
+        # Check for required message fields
+        required_attribs = ('cmd', 'service')
+        if not all(k in msg for k in required_attribs):
+            return { 'success': -1, 'msg': 'Missing message properties' }
+
+        s = Service(msg['service'])
+
+        result = s.run_cmd(msg['cmd'])
+
+        return result
+
+    def process_mgmt_req(self, msg):
+        """
+        Processes a management request
+
+        """
+        logging.debug('Processing management request')
+
+        # Check for required message fields
+        required_attribs = (
+            'cmd',
+        )
         
+        if not all(k in msg for k in required_attribs):
+            return { 'success': -1, 'msg': 'Missing message properties' }
+
+        mgmt_cmds = {
+            'agent.status':   self.agent_status,
+            'agent.shutdown': self.agent_shutdown,
+        }
+
+        result = mgmt_cmds[msg['cmd']]() if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
+
+        return result
+
+    def agent_status(self):
+        pass
+
+    def agent_shutdown(self):
+        pass
