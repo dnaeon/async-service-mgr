@@ -2,6 +2,64 @@
 """
 Core module of the Asynchronous Service Manager
 
+On the diagram below you can see the
+work flow of the Asynchronous Service Manager.
+
+
+                       (6)
+         +---------------------------+
+         |                           |
+  +------+-----+            +--------+-----+           (5)
+  |   Client   |            |     PULL     |<-----------------------+                          
+  +------------+   (1)      +--------------+                        |
+  |    REQ     |----------->|    ROUTER    |----+                   |
+  +------------+            +--------------|    |                   |
+                            |  Service Mgr |    |                   |
+                            +--------------+    | (2)               |
+                            |      REP     |    |                   |
+                            +--------------+    |                   |
+                            |     XPUB     |<---+                   |
+                            +------+-------+                        |
+                                   |                                |
+                                   | (3)                            |
+                                   |                                |
+           +-----------------------+--------------------+           |
+           |                       |                    |           |
+     +-----+-----+          +------------+        +-----------+     |
+     |    SUB    |          |    SUB     |        |    SUB    |     |
+     +-----------+          +------------+        +-----------+     |
+     |   Node 1  |          |   Node 2   |        |   Node 3  |     |
+     +-----------+          +------------+        +-----------+     |
+     |    PUSH   |          |    PUSH    |        |    PUSH   |     |
+     +-----+-----+          +-----+------+        +-----+-----+     |
+           |                      |                     |           |
+           +----------------------+---------------------+           |
+                                  |                                 |
+                                  |               (4)               | 
+                                  +---------------------------------+
+  
+Workflow explained:
+
+ (1) Client initiates the message flow by
+     sending a request to the Service Manager's ROUTER socket.
+
+ (2) The Service Manager distributes the client message to each
+     connected node via the XPUB socket.
+
+ (3) Each connected node receives the message via it's SUB socket
+     and processes the client request. 
+
+ (4) After processing the client request each node sends back
+     results to the Service Manager sink via a PUSH socket.
+     Along with the message connection identity is also sent.
+
+ (5) Service Manager's sink receives results from nodes 
+     via it's PULL socket. The result message from each node
+     also contains connection identity details so that it is
+     properly forwarded to clients.
+
+ (6) Client receives results from the Service Manager
+
 """
 
 import logging
