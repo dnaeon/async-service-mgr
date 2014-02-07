@@ -38,6 +38,8 @@ class ServiceManager(Daemon):
 
             # Frontend socket, dispatch message to the subscribers
             if socks.get(self.frontend_socket):
+                logging.debug('Received message on the frontend socket')
+                
                 # The routing envolope looks like this:
                 #
                 # Frame 1:  [ N ][...]  <- Identity of connection
@@ -46,21 +48,32 @@ class ServiceManager(Daemon):
                 _id    = self.frontend_socket.recv()
                 _empty = self.frontend_socket.recv()
                 msg    = self.frontend_socket.recv_json()
-                print 'received message on the frontend socket'
 
-            # Backend socket, agents subscribing
+                self.backend_socket.send(msg)
+
+            # Backend socket, agents are subscribing to it
             if socks.get(self.backend_socket):
-                print 'received message on the backend socket'
+                logging.debug('Received message on the backend socket')
+
+                msg = self.backend_socket.recv()
+                if msg[0] == '\x01':
+                    logging.debug('Agent subscribed')
+                elif msg[0] == '\x00':
+                    logging.debug('Agent unsubscribed')
 
             # Sink socket
             if socks.get(self.sink_socket):
-                print 'received message on the sink socket'
+                logging.debug('Received message on the sink socket')
+                msg = self.sink_socket.recv_json()
 
             # Management socket
             if socks.get(self.mgmt_socket):
-                print 'received message on the management socket'
+                logging.debug('Received message on the management socket')
+                msg = self.mgmt_socket.recv_json()
 
         # Shutdown time has arrived, let's cleanup a bit here
+        logging.info('Service Manager is shutting down')
+        
         self.close_listeners()
         self.stop()
 
@@ -79,6 +92,8 @@ class ServiceManager(Daemon):
 
         for k in kwargs:
             setattr(self, k, kwargs[k])
+
+        logging.debug('Creating Service Manager listeners')
 
         self.zcontext = zmq.Context().instance()
 
@@ -108,6 +123,8 @@ class ServiceManager(Daemon):
         Closes the Service Manager sockets
 
         """
+        loggin.debug('Closing Service Manager listeners')
+
         self.zpoller.unregister(self.frontend_socket)
         self.zpoller.unregister(self.backend_socket)
         self.zpoller.unregister(self.sink_socket)

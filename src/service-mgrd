@@ -91,7 +91,7 @@ def parse_conf(path):
 
 def main():
     usage="""
-Usage: service-mgrd [-d] [-p <pidfile>] [-f <config-file>] [-o <logfile>] start
+Usage: service-mgrd [-d] [-D] [-p <pidfile>] [-f <config-file>] [-o <logfile>] start
        service-mgrd -e <endpoint> stop
        service-mgrd -e <endpoint> status
        service-mgrd --help
@@ -107,6 +107,7 @@ Options:
   -v, --version                             Display version and exit
   -d, --daemon                              Start as a daemon, otherwise
                                             run in the foreground
+  -D, --debug                               Run Service Manager daemon in debug mode
   -p <pidfile>, --pidfile <pidfile>         Specify pidfile file to use
                                             [default: /var/run/service-mgr/service-mgrd.pid]
   -f <config-file>, --file <config-file>    Specify config file to use
@@ -119,8 +120,10 @@ Options:
 
     args = docopt(usage, version="0.1.0")
 
+    level = logging.DEBUG if args['--debug'] else logging.INFO
+
     logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgrd[%(process)s]: %(message)s',
-                        level=logging.DEBUG)
+                        level=level)
 
     conf_options = parse_conf(args['--file'])
 
