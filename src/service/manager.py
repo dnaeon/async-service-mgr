@@ -40,7 +40,7 @@ class ServiceManager(Daemon):
             if socks.get(self.frontend_socket):
                 logging.debug('Received message on the frontend socket')
                 
-                # The routing envolope looks like this:
+                # The routing envelope looks like this:
                 #
                 # Frame 1:  [ N ][...]  <- Identity of connection
                 # Frame 2:  [ 0 ][]     <- Empty delimiter frame
@@ -49,32 +49,50 @@ class ServiceManager(Daemon):
                 _empty = self.frontend_socket.recv()
                 msg    = self.frontend_socket.recv_json()
 
-                logging.debug('ID: %s' % _id)
-                logging.debug('Message: %s' % msg)
+                logging.debug('ID: %s', _id)
+                logging.debug('Message: %s', msg)
+                logging.debug('Sending message to backend for processing')
 
+                # The message we send to our Agents also contains the client id as well
+                # This is done so later when we receive the results in the sink we can
+                # route the results to the clients properly
+                self.backend_socket.send(_id, zmq.SNDMORE)
+                self.backend_socket.send("", zmq.SNDMORE)
                 self.backend_socket.send_json(msg)
 
-            # Backend socket, agents are subscribing to it
+            # Backend socket, agents are (un)subscribing to/from it
             if socks.get(self.backend_socket):
                 logging.debug('Received message on the backend socket')
 
                 msg = self.backend_socket.recv()
                 topic = 'any' if not msg[1:] else msg[1:]
                 if msg[0] == '\x01':
-                    logging.debug('Agent subscribed to topic: %s' % topic)
+                    logging.debug('Agent subscribed to topic: %s', topic)
                 elif msg[0] == '\x00':
-                    logging.debug('Agent unsubscribed from topic: %s' % topic)
+                    logging.debug('Agent unsubscribed from topic: %s', topic)
 
-            # Sink socket
+            # Sink socket, collects results from Agents
             if socks.get(self.sink_socket):
                 logging.debug('Received message on the sink socket')
+                
+                _id = self.sink_socket.recv()
+                _empty = self.sink_socket.recv()
                 msg = self.sink_socket.recv_json()
-                logging.debug('Message: %s' % msg)
 
-            # Management socket
+                logging.debug('ID: %s', _id)
+                logging.debug('Message: %s', msg)
+
+                # Forward message back to the client
+                self.frontend_socket.send(_id, zmq.SNDMORE)
+                self.frontend_socket.send("", zmq.SNDMORE)
+                self.frontend_socket.send_json(msg)
+
+            # Management socket, receives management commands
             if socks.get(self.mgmt_socket):
                 logging.debug('Received message on the management socket')
+                
                 msg = self.mgmt_socket.recv_json()
+                
                 logging.debug('Message: %s' % msg)
 
         # Shutdown time has arrived, let's cleanup a bit here
@@ -88,10 +106,13 @@ class ServiceManager(Daemon):
         Creates the ServiceManager listeners
 
         """
-        required_args = ('frontend_endpoint',
-                         'backend_endpoint',
-                         'mgmt_endpoint',
-                         'sink_endpoint')
+        # Check for required endpoints args
+        required_args = (
+            'frontend_endpoint',
+            'backend_endpoint',
+            'mgmt_endpoint',
+            'sink_endpoint'
+        )
 
         if not all(k in kwargs for k in required_args):
             raise ServiceManagerException, 'Missing socket endpoints, e.g. frontend/backend/mgmt/sink'
@@ -103,12 +124,12 @@ class ServiceManager(Daemon):
 
         self.zcontext = zmq.Context().instance()
 
-        # ServiceManager sockets
+        # Our Service Manager sockets
         self.frontend_socket = self.zcontext.socket(zmq.ROUTER)
         self.backend_socket = self.zcontext.socket(zmq.XPUB)
         self.sink_socket = self.zcontext.socket(zmq.PULL)
         self.mgmt_socket = self.zcontext.socket(zmq.REP)
-        
+
         try:
             self.frontend_socket.bind(self.frontend_endpoint)
             self.backend_socket.bind(self.backend_endpoint)
