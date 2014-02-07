@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+
+"""
+Service Manager Agent daemon
+
+"""
+
+import json
+import logging
+import ConfigParser
+
+from docopt import docopt
+from service.agent import ServiceManagerAgent
+from service.client import ServiceManagerClient
+
+def start(pidfile, daemon, **kwargs):
+    """
+    Start the Service Manager Agent daemon
+
+    Args:
+        pidfile (string): Location to the daemon's pidfile
+        daemon    (bool): If True daemonize the Service Manager Agent
+
+    """
+    agent = ServiceManagerAgent(pidfile)
+
+    if daemon:
+        # Run as daemon
+        agent.start(**kwargs)
+    else:
+        # Run in the foreground
+        agent.run(**kwargs)
+
+def stop(endpoint):
+    """
+    Stops the Service Manager Agent daemon
+
+    Args:
+        endpoint (string): The endpoint we send the shutdown message to
+
+    """
+    # The message we send to initiate the shutdown sequence
+    msg = { "method": "agent.shutdown" }
+
+    # Send out our message
+    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
+    result = client.run(msg)
+
+    return result
+
+def status(endpoint):
+    """
+    Get status information from the Service Manager Agent daemon
+
+    Args:
+        endpoint (string): The endpoint we send the status request to
+    
+    """
+    # The message we send to get status information
+    msg = { "method": "agent.status" }
+
+    # Send out our message
+    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
+    result = client.run(msg)
+
+    return result
+
+def parse_conf(path):
+    """
+    Parses the Service Manager Agent configuration file
+
+    Args:
+        path (str): Path to the Service Manager Agent conf file
+
+    Returns:
+        A dict of the Service Manager Agent config options
+
+    """
+    parser = ConfigParser.ConfigParser()
+    parser.read(path)
+
+    required_opts = ('manager_endpoint',
+                     'sink_endpoint',
+                     'mgmt_endpoint')
+
+    if not all(parser.has_option('Default', opt) for opt in required_opts):
+        raise SystemExit, 'Missing or no configuration options in %s' % path
+
+    return dict(parser.items('Default'))
+
+def main():
+    usage="""
+Usage: service-mgr-agentd [-d] [-D] [-p <pidfile>] [-f <config-file>] [-o <logfile>] start
+       service-mgr-agentd -e <endpoint> stop
+       service-mgr-agentd -e <endpoint> status
+       service-mgr-agentd --help
+       service-mgr-agentd --version
+
+Arguments:
+  start                                     Start the Service Manager Agent
+  stop                                      Stop the Service Manager Agent
+  status                                    Get status information
+
+Options:
+  -h, --help                                Display this usage info
+  -v, --version                             Display version and exit
+  -d, --daemon                              Start as a daemon, otherwise
+                                            run in the foreground
+  -D, --debug                               Run the Service Manager Agent daemon in debug mode
+  -p <pidfile>, --pidfile <pidfile>         Specify pidfile file to use
+                                            [default: /var/run/service-mgr/service-mgr-agentd.pid]
+  -f <config-file>, --file <config-file>    Specify config file to use
+                                            [default: /etc/service-mgr/service-mgr-agentd.conf]
+  -e <endpoint>, --endpoint <endpoint>      Specify the endpoint we connect to
+  -o <logfile>, --output <logfile>          Specify the logfile to use
+                                            [default: /var/log/service-mgr/service-mgr-agentd.log]
+
+"""
+
+    args = docopt(usage, version="0.1.0")
+
+    level = logging.DEBUG if args['--debug'] else logging.INFO
+
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgr-agentd[%(process)s]: %(message)s',
+                        level=level)
+
+    conf_options = parse_conf(args['--file'])
+
+    result = None
+        
+    if args["start"]:
+        start(args["--pidfile"], args["--daemon"], **conf_options)
+    elif args["stop"]:
+        result = stop(args["--endpoint"])
+    elif args["status"]:
+        result = status(args["--endpoint"])
+
+    if result:
+        print json.dumps(result, indent=4)
+        
+if __name__ == '__main__':
+    main()
+
