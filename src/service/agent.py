@@ -36,33 +36,11 @@ class ServiceManagerAgent(Daemon):
 
             # Subscriber socket, receives service request messages
             if socks.get(self.sub_socket):
-                logging.debug('Received new message on the subscriber socket')
+                self.process_sub_msg()
 
-                topic = self.sub_socket.recv_unicode()
-                msg = self.sub_socket.recv_json()
-
-                logging.debug('Topic: %s', topic)
-                logging.debug('Message: %s', msg)
-
-                result = self.process_service_req(msg)
-
-                # Add the request id to the result message,
-                # so that Service Manager publishes it to the clients
-                result['uuid'] = msg['uuid']
-
-                self.sink_socket.send_json(result)
-            
             # Management socket
             if socks.get(self.mgmt_socket):
-                logging.debug('Received new message on the management socket')
-                
-                msg = self.mgmt_socket.recv_json()
-                
-                logging.debug('Message: %s' % msg)
-
-                result = self.process_mgmt_req(msg)
-                
-                self.mgmt_socket.send_json(result)
+                self.process_mgmt_msg()
 
         # Shutdown time has arrived, let's cleanup a bit here
         self.close_sockets()
@@ -133,6 +111,56 @@ class ServiceManagerAgent(Daemon):
 
         self.zcontext.destroy()
 
+    def process_sub_msg(self):
+        """
+        Processes a message on the subscriber socket
+
+        """
+        logging.debug('Received new message on the subscriber socket')
+
+        topic = self.sub_socket.recv_unicode()
+        msg = self.sub_socket.recv_json()
+
+        logging.debug('Topic: %s', topic)
+        logging.debug('Message: %s', msg)
+
+        result = self.process_service_req(msg)
+                
+        # Add the request id to the result message,
+        # so that Service Manager publishes it to the clients
+        result['uuid'] = msg['uuid']
+
+        self.sink_socket.send_json(result)
+
+    def process_mgmt_msg(self):
+        """
+        Processes a message on the management socket
+
+        """
+        logging.debug('Received new message on the management socket')
+                
+        msg = self.mgmt_socket.recv_json()
+        
+        logging.debug('Message: %s' % msg)
+        logging.debug('Processing management request')
+
+        # Check for required message fields
+        required_attribs = (
+            'cmd',
+        )
+        
+        if not all(k in msg for k in required_attribs):
+            return { 'success': -1, 'msg': 'Missing message properties' }
+
+        mgmt_cmds = {
+            'agent.status':   self.agent_status,
+            'agent.shutdown': self.agent_shutdown,
+        }
+
+        result = mgmt_cmds[msg['cmd']](msg) if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
+
+        self.mgmt_socket.send_json(result)
+
     def process_service_req(self, msg):
         """
         Processes a service request 
@@ -152,30 +180,6 @@ class ServiceManagerAgent(Daemon):
         s = Service(msg['service'])
 
         result = s.run_cmd(msg['cmd'])
-
-        return result
-
-    def process_mgmt_req(self, msg):
-        """
-        Processes a management request
-
-        """
-        logging.debug('Processing management request')
-
-        # Check for required message fields
-        required_attribs = (
-            'cmd',
-        )
-        
-        if not all(k in msg for k in required_attribs):
-            return { 'success': -1, 'msg': 'Missing message properties' }
-
-        mgmt_cmds = {
-            'agent.status':   self.agent_status,
-            'agent.shutdown': self.agent_shutdown,
-        }
-
-        result = mgmt_cmds[msg['cmd']](msg) if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
 
         return result
 
