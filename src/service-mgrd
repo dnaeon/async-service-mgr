@@ -40,7 +40,7 @@ def stop(endpoint):
 
     """
     # The message we send to initiate the shutdown sequence
-    msg = { "method": "manager.shutdown" }
+    msg = { "cmd": "manager.shutdown" }
 
     # Send out our message
     client = ServiceManagerClient()
@@ -63,7 +63,7 @@ def status(endpoint):
     
     """
     # The message we send to get status information
-    msg = { "method": "manager.status" }
+    msg = { "cmd": "manager.status" }
 
     # Send out our message
     client = ServiceManagerClient()
@@ -137,11 +137,10 @@ Options:
     logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgrd[%(process)s]: %(message)s',
                         level=level)
 
-    conf_options = parse_conf(args['--file'])
-
     result = None
         
     if args["start"]:
+        conf_options = parse_conf(args['--file'])
         start(args["--pidfile"], args["--daemon"], **conf_options)
     elif args["stop"]:
         result = stop(args["--endpoint"])
