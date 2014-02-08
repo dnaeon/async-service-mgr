@@ -69,7 +69,7 @@ class ServiceManagerClient(object):
 
             # Do we have a reply?
             if socks.get(self.zclient) == zmq.POLLIN:
-                result = self.zclient.recv()
+                result = self.zclient.recv_json()
                 break
             else:
                 # We didn't get a reply back from the server, let's retry
