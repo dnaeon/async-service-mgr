@@ -87,11 +87,19 @@ class ServiceManagerAgent(Daemon):
         for k in kwargs:
             setattr(self, k, kwargs[k])
 
+        # Service Manager Subscriber socket
+        # Subscribe to every topic defined in the conf file.
+        # Also subscribe to topics related to the platform on
+        # which our Agent runs, e.g. FreeBSD, Linux, etc.
         self.zcontext = zmq.Context().instance()
-
-        # Service Manager Agent sockets
         self.sub_socket = self.zcontext.socket(zmq.SUB)
-        self.sub_socket.setsockopt(zmq.SUBSCRIBE, "")
+
+        if hasattr(self, 'topics'):
+            for eachTopic in self.topics:
+                self.sub_socket.setsockopt(zmq.SUBSCRIBE, eachTopic)
+
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, platform.system())
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, platform.node())
         
         self.sink_socket = self.zcontext.socket(zmq.PUSH)
         self.mgmt_socket = self.zcontext.socket(zmq.REP)
@@ -99,7 +107,6 @@ class ServiceManagerAgent(Daemon):
         self.sub_socket.connect(self.manager_endpoint)
         self.sink_socket.connect(self.sink_endpoint)
 
-        # Bind management socket
         try:
             self.mgmt_socket.bind(self.mgmt_endpoint)
         except zmq.ZMQError as e:
@@ -134,7 +141,11 @@ class ServiceManagerAgent(Daemon):
         logging.debug('Processing service request')
 
         # Check for required message fields
-        required_attribs = ('cmd', 'service')
+        required_attribs = (
+            'cmd',
+            'service'
+        )
+        
         if not all(k in msg for k in required_attribs):
             return { 'success': -1, 'msg': 'Missing message properties' }
 
