@@ -9,6 +9,9 @@ setup(name='service-mgr',
       packages=['service'],
       package_dir={'': 'src'},
       scripts=[
+          'src/service-mgrd',
+          'src/service-mgr-agentd',
+          'src/service-mgr-client',
       ],
       install_requires=[
         'pyzmq >= 13.1.0',
