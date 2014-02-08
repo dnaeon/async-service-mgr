@@ -15,46 +15,71 @@ def main():
 
     usage="""
 Usage:
-  service-mgr-client [-r <retries>] [-t <timeout>] -e <endpoint> -T <topic> -c <cmd> -s <service>
+  service-mgr-client [-w <waittime>] [-r <retries>] [-t <timeout>] [-D] -e <endpoint> -T <topic> -c <cmd> -s <service>
   service-mgr-client --help
   service-mgr-client --version
 
 Options:
-  -h, --help                                  Display this usage info
-  -v, --version                               Display version and exit
-  -r <retries>, --retries <retries>           Number of times to retry if a request times out 
-                                              [default: 3]
-  -t <timeout>, --timeout <timeout>           Timeout after that period of milliseconds 
-                                              [default: 3000]
-  -e <endpoint>, --endpoint <endpoint>        Endpoint of Service Manager to send the request to
-                                              [default: tcp://localhost:10123]
-  -T <topic>, --topic <topic>                 Topic of the message
-  -c <cmd>, --cmd <cmd>                       Service command, e.g. 'service.status', 'service.stop', etc.
-  -s <service>, --service <service>           Name of the service
+  -h, --help                             Display this usage info
+  -v, --version                          Display version and exit
+  -r <retries>, --retries <retries>      Number of times to retry if a request times out 
+                                         [default: 3]
+  -t <timeout>, --timeout <timeout>      Timeout after that period of milliseconds 
+                                         [default: 1000]
+  -w <waittime>, --wait-time <waittime>  Wait that number of seconds from the Result Publisher
+                                         [default: 0.1]
+  -e <endpoint>, --endpoint <endpoint>   Endpoint of Service Manager to send the request to
+                                         [default: tcp://localhost:5500]
+  -D, --debug                            Run Service Manager Client in debug mode
+  -T <topic>, --topic <topic>            Topic of the message
+  -c <cmd>, --cmd <cmd>                  Service command, e.g. 'service.status', 'service.stop', etc.
+  -s <service>, --service <service>      Name of the service
 
 """
 
     args = docopt(usage, version="0.1.0")
 
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgr-client[%(process)s]: %(message)s',
-                        level=logging.DEBUG)
+    level = logging.DEBUG if args['--debug'] else logging.INFO
 
-    client = ServiceManagerClient(endpoint=args["--endpoint"],
-                                  retries=int(args["--retries"]),
-                                  timeout=int(args["--timeout"]))
-
-    # Message we send out to workers
+    logging.basicConfig(
+        format='%(asctime)s - %(levelname)s - service-mgr-client[%(process)s]: %(message)s',
+        level=level
+    )
+   
+    # Message we send out to the Service Manager
     msg = {
         'cmd':     args['--cmd'],
         'topic':   args['--topic'],
         'service': args['--service'],
     }
-    
-    # Get the result
-    data = client.run(msg)
-    result = json.dumps(data, indent=4)
-    
-    print result
+
+    # Acquire a service request id from Service Manager
+    client = ServiceManagerClient()
+    result = client.simple_request(
+        msg,
+        endpoint=args['--endpoint'],
+        timeout=int(args['--timeout']),
+        retries=int(args['--retries'])
+    )
+
+    if not all(k in result for k in ('uuid', 'port')):
+        logging.warn('Unable to acquire a service request id')
+        raise SystemExit, result
+
+    # Get the Service Manager host and transport
+    # We will subscribe for messages on the Result Publisher on
+    # successful service request id acquire
+    transport = args['--endpoint'].split(':')[:2]
+    transport.append(str(result['port']))
+    publisher = ':'.join(transport)
+
+    result = client.wait_for_publisher_msgs(
+        endpoint=publisher,
+        topic=result['uuid'],
+        wait_time=float(args['--wait-time'])
+    ) 
+
+    print json.dumps(result, indent=4)
 
 if __name__ == '__main__':
     main()
