@@ -6,6 +6,7 @@ Service Manager Daemon
 
 import uuid
 import logging
+import platform
 
 import zmq
 
@@ -103,12 +104,14 @@ class ServiceManager(Daemon):
                 logging.debug('Received message on the management socket')
                 
                 msg = self.mgmt_socket.recv_json()
-                
-                logging.debug('Message: %s' % msg)
+
+                logging.debug('Message: %s', msg)
+
+                result = self.process_mgmt_req(msg)
+
+                self.mgmt_socket.send_json(result)
 
         # Shutdown time has arrived, let's cleanup a bit here
-        logging.info('Service Manager is shutting down')
-        
         self.close_listeners()
         self.stop()
 
@@ -169,7 +172,7 @@ class ServiceManager(Daemon):
         Closes the Service Manager sockets
 
         """
-        loggin.debug('Closing Service Manager listeners')
+        logging.debug('Closing Service Manager listeners')
 
         self.zpoller.unregister(self.frontend_socket)
         self.zpoller.unregister(self.backend_socket)
@@ -180,6 +183,67 @@ class ServiceManager(Daemon):
         self.backend_socket.close()
         self.sink_socket.close()
         self.mgmt_socket.close()
-        self.result_pub_port.close()
+        self.result_pub_socket.close()
 
         self.zcontext.destroy()
+
+    def process_mgmt_req(self, msg):
+        """
+        Processes a management messages
+        
+        Args:
+            msg (dict): Message to process
+
+        """
+        logging.debug('Processing management message')
+
+        required_attribs = (
+            'cmd',
+        )
+        
+        if not all(k in msg for k in required_attribs):
+            return { 'success': -1, 'msg': 'Missing message properties' }
+
+        mgmt_cmds = {
+            'manager.status':   self.manager_status,
+            'manager.shutdown': self.manager_shutdown,
+        }
+
+        result = mgmt_cmds[msg['cmd']](msg) if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
+
+        return result
+
+    def manager_status(self, msg):
+        """
+        Get status information about the Service Manager
+
+        """
+        result = {
+            'success': 0,
+            'msg': 'Service Manager Status',
+            'result': {
+                'status': 'running',
+                'uname': platform.uname(),
+                'frontend_endpoint': self.frontend_endpoint,
+                'backend_endpoint': self.backend_endpoint,
+                'sink_endpoint': self.sink_endpoint,
+                'mgmt_endpoint': self.mgmt_endpoint,
+                'result_publisher_port': self.result_pub_port,
+            }
+        }
+
+        return result
+
+    def manager_shutdown(self, msg):
+        """
+        Initiates the Service Manager shutdown sequence
+
+        """
+        logging.info('Service Manager is shutting down')
+
+        self.time_to_die = True
+
+        return { 'success': 0, 'msg': 'Service Manager is shutting down' }
+
+        
+
