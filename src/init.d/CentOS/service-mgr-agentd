@@ -16,7 +16,7 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 DESC="service-mgr-agentd daemon"
 NAME=service-mgr-agentd
 LOGFILE="/var/log/service-mgr/service-mgr-agentd.log"
-DAEMON=/usr/bin/service-mgr-agentd
+DAEMON=/usr/local/bin/service-mgr-agentd
 SCRIPTNAME=/etc/init.d/"$NAME"
 MGMT_INTERFACE="tcp://localhost:6000"
 

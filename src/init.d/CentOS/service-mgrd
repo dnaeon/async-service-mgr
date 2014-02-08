@@ -16,7 +16,7 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 DESC="service-mgrd daemon"
 NAME=service-mgrd
 LOGFILE="/var/log/service-mgr/service-mgrd.log"
-DAEMON=/usr/bin/service-mgrd
+DAEMON=/usr/local/bin/service-mgrd
 SCRIPTNAME=/etc/init.d/"$NAME"
 MGMT_INTERFACE="tcp://localhost:5800"
 
