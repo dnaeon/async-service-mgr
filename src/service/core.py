@@ -3,25 +3,27 @@
 Core module of the Asynchronous Service Manager
 
 On the diagram below you can see the
-work flow of the Asynchronous Service Manager.
+workflow of the Asynchronous Service Manager.
+     
 
-
-                       (6)
-         +---------------------------+
-         |                           |
-  +------+-----+            +--------+-----+           (5)
-  |   Client   |            |     PULL     |<-----------------------+                          
-  +------------+   (1)      +--------------+                        |
-  |    REQ     |----------->|    ROUTER    |----+                   |
-  +------------+            +--------------|    |                   |
-                            |  Service Mgr |    |                   |
-                            +--------------+    | (2)               |
+                     (3)
+        +--------------------------+
+        |            (9)           |
+        |                   +--------------+
+        |              +--->|     PUB      |
+  +-----+------+   (8) |    +--------------+           (7)
+  |    SUB     |       +----|     PULL     |<-----------------------+                          
+  +------------+            +--------------+                        |
+  |   Client   |      +---->|    ROUTER    |----+                   |
+  +------------+  (1) |     +--------------|    |                   |
+  |    REQ     |<-----+     |  Service Mgr |    |                   |
+  +------------+  (2)       +--------------+    | (4)               |
                             |      REP     |    |                   |
                             +--------------+    |                   |
                             |     XPUB     |<---+                   |
                             +------+-------+                        |
                                    |                                |
-                                   | (3)                            |
+                                   | (5)                            |
                                    |                                |
            +-----------------------+--------------------+           |
            |                       |                    |           |
@@ -35,30 +37,41 @@ work flow of the Asynchronous Service Manager.
            |                      |                     |           |
            +----------------------+---------------------+           |
                                   |                                 |
-                                  |               (4)               | 
+                                  |               (6)               | 
                                   +---------------------------------+
   
 Workflow explained:
 
  (1) Client initiates the message flow by
-     sending a request to the Service Manager's ROUTER socket.
+     sending a request for service id to the Service Manager
 
- (2) The Service Manager distributes the client message to each
-     connected node via the XPUB socket.
+ (2) Service Manager receives client request and returns a
+     unique service request id to the client and port number of
+     the Result Publisher socket
 
- (3) Each connected node receives the message via it's SUB socket
-     and processes the client request. 
+ (3) Client subscribes to the Service Manager Result Publisher
+     and listens for topics with the acquired service request id
 
- (4) After processing the client request each node sends back
-     results to the Service Manager sink via a PUSH socket.
-     Along with the message connection identity is also sent.
+ (4) The Service Manager distributes the client service request
+     to each connected node via the XPUB socket and passes the
+     service request id along with the message
 
- (5) Service Manager's sink receives results from nodes 
+ (5) Each connected node receives the message via it's SUB socket
+     and processes the client request
+
+ (6) After processing the client request each node sends back
+     results to the Service Manager sink via a PUSH socket along
+     with the service request id in the message
+
+ (7) Service Manager's sink receives results from nodes 
      via it's PULL socket. The result message from each node
-     also contains connection identity details so that it is
-     properly forwarded to clients.
+     is received along with details about the service request id
 
- (6) Client receives results from the Service Manager
+ (8) The result message is published on the Service Manager's
+     Result Publisher socket with topic set to the unique
+     service request id
+
+ (9) Subscribed clients receive the result message 
 
 """
 
