@@ -126,16 +126,16 @@ Options:
   -f <config-file>, --file <config-file>    Specify config file to use
                                             [default: /etc/service-mgr/service-mgr-agentd.conf]
   -e <endpoint>, --endpoint <endpoint>      Specify the endpoint we connect to
-  -o <logfile>, --output <logfile>          Specify the logfile to use
-                                            [default: /var/log/service-mgr/service-mgr-agentd.log]
+  -o <logfile>, --output <logfile>          Specify the log file to use
 
 """
 
     args = docopt(usage, version="0.1.0")
 
     level = logging.DEBUG if args['--debug'] else logging.INFO
-
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgr-agentd[%(process)s]: %(message)s',
+    
+    logging.basicConfig(filename=args['--output'],
+                        format='%(asctime)s - %(levelname)s - service-mgr-agentd[%(process)s]: %(message)s',
                         level=level)
 
     result = None

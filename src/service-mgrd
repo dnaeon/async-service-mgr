@@ -125,7 +125,7 @@ Options:
   -f <config-file>, --file <config-file>    Specify config file to use
                                             [default: /etc/service-mgr/service-mgrd.conf]
   -e <endpoint>, --endpoint <endpoint>      Specify the endpoint we connect to
-  -o <logfile>, --output <logfile>          Specify the logfile to use
+  -o <logfile>, --output <logfile>          Specify the log file to use
 
 """
 
