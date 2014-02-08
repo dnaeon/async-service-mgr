@@ -40,7 +40,7 @@ def stop(endpoint):
 
     """
     # The message we send to initiate the shutdown sequence
-    msg = { "method": "agent.shutdown" }
+    msg = { "cmd": "agent.shutdown" }
 
     # Send out our message
     client = ServiceManagerClient()
@@ -51,7 +51,7 @@ def stop(endpoint):
         timeout=1000,
         retries=3
     )
-    
+
     return result
 
 def status(endpoint):
@@ -63,7 +63,7 @@ def status(endpoint):
     
     """
     # The message we send to get status information
-    msg = { "method": "agent.status" }
+    msg = { "cmd": "agent.status" }
 
     # Send out our message
     client = ServiceManagerClient()
@@ -74,7 +74,7 @@ def status(endpoint):
         timeout=1000,
         retries=3
     )
-    
+
     return result
 
 def parse_conf(path):
@@ -91,9 +91,11 @@ def parse_conf(path):
     parser = ConfigParser.ConfigParser()
     parser.read(path)
 
-    required_opts = ('manager_endpoint',
-                     'sink_endpoint',
-                     'mgmt_endpoint')
+    required_opts = (
+        'manager_endpoint',
+        'sink_endpoint',
+        'mgmt_endpoint'
+    )
 
     if not all(parser.has_option('Default', opt) for opt in required_opts):
         raise SystemExit, 'Missing or no configuration options in %s' % path
@@ -136,11 +138,10 @@ Options:
     logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgr-agentd[%(process)s]: %(message)s',
                         level=level)
 
-    conf_options = parse_conf(args['--file'])
-
     result = None
         
     if args["start"]:
+        conf_options = parse_conf(args['--file'])
         start(args["--pidfile"], args["--daemon"], **conf_options)
     elif args["stop"]:
         result = stop(args["--endpoint"])

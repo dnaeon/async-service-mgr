@@ -175,12 +175,36 @@ class ServiceManagerAgent(Daemon):
             'agent.shutdown': self.agent_shutdown,
         }
 
-        result = mgmt_cmds[msg['cmd']]() if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
+        result = mgmt_cmds[msg['cmd']](msg) if mgmt_cmds.get(msg['cmd']) else { 'success': -1, 'msg': 'Uknown management command requested' }
 
         return result
 
-    def agent_status(self):
-        pass
+    def agent_status(self, msg):
+        """
+        Get status information about the Service Manager Agent
 
-    def agent_shutdown(self):
-        pass
+        """
+        result = {
+            'success': 0,
+            'msg': 'Service Manager Agent Status',
+            'result': {
+                'status': 'running',
+                'uname': platform.uname(),
+                'manager_endpoint': self.manager_endpoint,
+                'sink_endpoint': self.sink_endpoint,
+                'mgmt_endpoint': self.mgmt_endpoint,
+            }
+        }
+
+        return result
+
+    def agent_shutdown(self, msg):
+        """
+        Initiates the Service Manager Agent shutdown sequence
+
+        """
+        logging.info('Service Manager Agent is shutting down')
+
+        self.time_to_die = True
+
+        return { 'success': 0, 'msg': 'Service Manager Agent is shutting down' }
