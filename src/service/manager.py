@@ -150,8 +150,15 @@ class ServiceManager(Daemon):
 
         logging.debug('ID: %s', _id)
         logging.debug('Message: %s', msg)
+
+        if not isinstance(msg, dict):
+            self.frontend_socket.send(_id, zmq.SNDMORE)
+            self.frontend_socket.send("", zmq.SNDMORE)
+            self.frontend_socket.send_json({ 'success': -1, 'msg': 'Request message should be in JSON format' })
+            return
+
         logging.debug('Generating client id for result collecting')
-        
+
         # Generate a service request id for our client and ask them to
         # subscribe to the result publisher endpoint in order to receive
         # their results
@@ -211,8 +218,12 @@ class ServiceManager(Daemon):
         logging.debug('Received message on the management socket')
                 
         msg = self.mgmt_socket.recv_json()
-        
+
         logging.debug('Message: %s', msg)
+        
+        if not isinstance(msg, dict):
+            self.mgmt_socket.send_json({ 'success': -1, 'msg': 'Request message should be in JSON format' })
+            return
 
         required_attribs = (
             'cmd',
@@ -261,6 +272,4 @@ class ServiceManager(Daemon):
         self.time_to_die = True
 
         return { 'success': 0, 'msg': 'Service Manager is shutting down' }
-
-        
 
