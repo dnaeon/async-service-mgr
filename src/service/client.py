@@ -18,32 +18,38 @@ class ServiceManagerClient(object):
         The result message back to the client
         
     """
-    def __init__(self, endpoint, timeout=3000, retries=3):
+    def __init__(self, endpoint):
         """
         Initializes a ServiceManagerClient object
 
         Args:
-            timeout  (int): Timeout after that number of milliseconds
-            retries  (int): Number of retries
             endpoint (str): Endpoint we connect the client to
 
         """
-        self.timeout  = timeout
-        self.retries  = retries
         self.endpoint = endpoint
 
-    def run(self, msg):
+    def simple_request(self, msg, retries=3, timeout=3000):
         """
-        Main Service Manager Client method
+        Service Manager Client method for sending out simple requests
+
+        The simple request method is useful for sending out requests
+        with a retry mechanism and wait for a single answer on the receiving socket.
+
+        Example use cases are for sending out management messages to daemons.
 
         Partially based on the Lazy Pirate Pattern:
 
             - http://zguide.zeromq.org/py:all#Client-Side-Reliability-Lazy-Pirate-Pattern
 
         Args:
-            msg (dict): The client message to send
+            msg     (dict): The client message to send
+            retries  (int): Number of retries
+            timeout  (int): Timeout after that number of milliseconds
             
         """
+        self.retries = retries
+        self.timeout = timeout
+
         self.zcontext = zmq.Context().instance()
         
         self.zclient = self.zcontext.socket(zmq.REQ)
@@ -68,7 +74,7 @@ class ServiceManagerClient(object):
             else:
                 # We didn't get a reply back from the server, let's retry
                 self.retries -= 1
-                logging.warning("Did not receive reply from server, retrying...")
+                logging.warning("Did not receive a reply, retrying...")
                 
                 # Socket is confused. Close and remove it.
                 self.zclient.close()
@@ -87,7 +93,7 @@ class ServiceManagerClient(object):
 
         # Did we have any result reply at all?
         if not result:
-            logging.error("Did not receive a reply from the server, aborting...")
-            return { "success": -1, "msg": "Did not receive reply from the server, aborting..." }
+            logging.error("Did not receive a reply, aborting...")
+            return { "success": -1, "msg": "Did not receive a reply, aborting..." }
         
         return result
