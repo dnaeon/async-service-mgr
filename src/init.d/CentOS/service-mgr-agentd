@@ -11,7 +11,15 @@
 # Default-Stop:      0 1 6 
 # Short-Description: Service Manager Agent daemon
 ### END INIT INFO
- 
+
+# /etc/init.d/service-agentd: start and stop the Service Manager Agent daemon
+
+set -e
+
+. /etc/rc.d/init.d/functions
+
+[ -f /etc/sysconfig/service-mgr-agentd ] && . /etc/sysconfig/service-mgr-agentd
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 DESC="service-mgr-agentd daemon"
 NAME=service-mgr-agentd
@@ -20,14 +28,7 @@ DAEMON=/usr/local/bin/service-mgr-agentd
 SCRIPTNAME=/etc/init.d/"$NAME"
 MGMT_INTERFACE="tcp://localhost:6000"
 
-set -e
 
-# /etc/init.d/service-agentd: start and stop the Service Manager Agent daemon
-
-. /etc/rc.d/init.d/functions
-
-[ -f /etc/sysconfig/service-mgr-agentd ] && . /etc/sysconfig/service-mgr-agentd
- 
 do_start() {
     ${DAEMON} -d -o ${LOGFILE} start
 }

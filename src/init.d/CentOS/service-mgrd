@@ -11,7 +11,15 @@
 # Default-Stop:      0 1 6 
 # Short-Description: Service Manager daemon
 ### END INIT INFO
- 
+
+# /etc/init.d/service-mgrd: start and stop the Service Manager daemon
+
+set -e
+
+. /etc/rc.d/init.d/functions
+
+[ -f /etc/sysconfig/service-mgrd ] && . /etc/sysconfig/service-mgrd
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 DESC="service-mgrd daemon"
 NAME=service-mgrd
@@ -20,14 +28,6 @@ DAEMON=/usr/local/bin/service-mgrd
 SCRIPTNAME=/etc/init.d/"$NAME"
 MGMT_INTERFACE="tcp://localhost:5800"
 
-set -e
- 
-# /etc/init.d/service-mgrd: start and stop the Service Manager daemon
-
-. /etc/rc.d/init.d/functions
-
-[ -f /etc/sysconfig/service-mgrd ] && . /etc/sysconfig/service-mgrd
- 
 do_start() {
     ${DAEMON} -d -o ${LOGFILE} start
 }
