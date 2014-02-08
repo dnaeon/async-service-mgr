@@ -25,7 +25,9 @@ set -e
 # /etc/init.d/service-agentd: start and stop the Service Manager Agent daemon
 
 . /lib/lsb/init-functions
- 
+
+[ - /etc/default/service-mgr-agentd ] && . /etc/default/service-mgr-agentd
+
 do_start() {
     ${DAEMON} -d -o ${LOGFILE} start
 }

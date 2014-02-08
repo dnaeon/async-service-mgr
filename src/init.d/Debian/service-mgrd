@@ -25,6 +25,8 @@ set -e
 # /etc/init.d/service-mgrd: start and stop the Service Manager daemon
 
 . /lib/lsb/init-functions
+
+[ -f /etc/default/service-mgrd ] && . /etc/default/service-mgrd
  
 do_start() {
     ${DAEMON} -d -o ${LOGFILE} start
