@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Author:           Marin Atanasov Nikolov <dnaeon@gmail.com>
+#
+### BEGIN INIT INFO
+# Provides:          service-mgr-agentd
+# Required-Start:    
+# Required-Stop:
+# X-Start-Before:    
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6 
+# Short-Description: Service Manager Agent daemon
+### END INIT INFO
+ 
+PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+DESC="service-mgr-agentd daemon"
+NAME=service-mgr-agentd
+LOGFILE="/var/log/service-mgr/service-mgr-agentd.log"
+DAEMON=/usr/local/bin/service-mgr-agentd
+SCRIPTNAME=/etc/init.d/"$NAME"
+MGMT_INTERFACE="tcp://localhost:6000"
+
+set -e
+ 
+# /etc/init.d/service-agentd: start and stop the Service Manager Agent daemon
+
+. /lib/lsb/init-functions
+ 
+do_start() {
+    ${DAEMON} -d -o ${LOGFILE} start
+}
+
+do_stop() {
+    ${DAEMON} -e ${MGMT_INTERFACE} stop
+}
+ 
+do_status() {
+    ${DAEMON} -e ${MGMT_INTERFACE} status
+}
+ 
+case "${1}" in
+    start)
+        do_start
+        ;;
+    reset|stop)
+        do_stop
+        ;;
+    status)
+        do_status
+        ;;
+    reload|restart|force-reload)
+        do_stop
+        do_start
+        ;;
+    *)
+        log_success_msg "usage: ${0} {start|stop|status|reload|restart|force-reload|reset}" >&2
+        ;;
+esac
