@@ -4,6 +4,7 @@ Service Manager Daemon
 
 """
 
+import uuid
 import logging
 
 import zmq
@@ -36,7 +37,7 @@ class ServiceManager(Daemon):
         while not self.time_to_die:
             socks = dict(self.zpoller.poll())
 
-            # Frontend socket, dispatch message to the subscribers
+            # Frontend socket, clients are requesting a service id
             if socks.get(self.frontend_socket):
                 logging.debug('Received message on the frontend socket')
                 
@@ -51,13 +52,26 @@ class ServiceManager(Daemon):
 
                 logging.debug('ID: %s', _id)
                 logging.debug('Message: %s', msg)
-                logging.debug('Sending message to backend for processing')
+                logging.debug('Generating client id for result collecting')
 
-                # The message we send to our Agents also contains the client id as well
-                # This is done so later when we receive the results in the sink we can
-                # route the results to the clients properly
-                self.backend_socket.send(_id, zmq.SNDMORE)
-                self.backend_socket.send("", zmq.SNDMORE)
+                # Generate a service request id for our client and ask them to
+                # subscribe to the result publisher endpoint in order to receive
+                # their results
+                req_id = uuid.uuid4().get_hex()
+                self.frontend_socket.send(_id, zmq.SNDMORE)
+                self.frontend_socket.send("", zmq.SNDMORE)
+                self.frontend_socket.send_json({'uuid': req_id, 'port': self.result_pub_port})
+
+                logging.debug('Client service request id is: %s', req_id)
+
+                # The message we send to the backend also contains the client
+                # service request id as well. This is done so later when we receive
+                # the results in the sink we can route the results to the clients properly
+                msg['uuid'] = req_id
+
+                logging.debug('Sending message to backend for processing')
+                
+                self.backend_socket.send_unicode(msg['topic'], zmq.SNDMORE)
                 self.backend_socket.send_json(msg)
 
             # Backend socket, agents are (un)subscribing to/from it
@@ -71,21 +85,18 @@ class ServiceManager(Daemon):
                 elif msg[0] == '\x00':
                     logging.debug('Agent unsubscribed from topic: %s', topic)
 
-            # Sink socket, collects results from Agents
+            # Sink socket, collects results from the backend agents
             if socks.get(self.sink_socket):
                 logging.debug('Received message on the sink socket')
                 
-                _id = self.sink_socket.recv()
-                _empty = self.sink_socket.recv()
                 msg = self.sink_socket.recv_json()
 
-                logging.debug('ID: %s', _id)
                 logging.debug('Message: %s', msg)
 
-                # Forward message back to the client
-                self.frontend_socket.send(_id, zmq.SNDMORE)
-                self.frontend_socket.send("", zmq.SNDMORE)
-                self.frontend_socket.send_json(msg)
+                # Publish the results to the clients using the
+                # request id of the service request as the topic
+                self.result_pub_socket.send_unicode(msg['uuid'], zmq.SNDMORE)
+                self.result_pub_socket.send_json(msg)
 
             # Management socket, receives management commands
             if socks.get(self.mgmt_socket):
