@@ -43,9 +43,15 @@ def stop(endpoint):
     msg = { "method": "manager.shutdown" }
 
     # Send out our message
-    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
-    result = client.run(msg)
+    client = ServiceManagerClient()
 
+    result = client.simple_request(
+        msg,
+        endpoint=endpoint,
+        timeout=1000,
+        retries=3
+    )
+    
     return result
 
 def status(endpoint):
@@ -60,9 +66,15 @@ def status(endpoint):
     msg = { "method": "manager.status" }
 
     # Send out our message
-    client = ServiceManagerClient(endpoint=endpoint, timeout=1000, retries=3)
-    result = client.run(msg)
+    client = ServiceManagerClient()
 
+    result = client.simple_request(
+        msg,
+        endpoint=endpoint,
+        timeout=1000,
+        retries=3
+    )
+    
     return result
 
 def parse_conf(path):
