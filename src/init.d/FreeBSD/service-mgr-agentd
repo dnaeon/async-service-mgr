@@ -1,0 +1,30 @@
+#!/bin/sh 
+#
+# PROVIDE: service-mgr-agentd
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following line to /etc/rc.conf[.local] to enable service-mgr-agentd
+#
+# service_mgr_agentd_enable (bool):   Set to "NO" by default.
+#                                     Set it to "YES" to enable service-mgrd.
+#
+# service_mgr_agentd_flags   (str):   Custom additional arguments to be passed
+#                                     to service-mgr-agentd
+#
+
+. /etc/rc.subr
+
+name="service_mgr_agentd"
+rcvar=service_mgr_agentd_enable
+
+command="/usr/local/bin/service-mgr-agentd"
+start_cmd="${command} -d -o /var/log/service-mgr/service-mgr-agentd.log"
+status_cmd="${command} -e tcp://localhost:6000 status"
+stop_cmd="${command} -e tcp://localhost:6000 stop"
+
+load_rc_config $name
+
+: ${service_mgrd_enable="NO"}
+
+run_rc_command "$1"

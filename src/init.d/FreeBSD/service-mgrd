@@ -1,0 +1,30 @@
+#!/bin/sh 
+#
+# PROVIDE: service-mgrd
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following line to /etc/rc.conf[.local] to enable service-mgrd
+#
+# service_mgrd_enable (bool):   Set to "NO" by default.
+#                               Set it to "YES" to enable service-mgrd.
+#
+# service_mgrd_flags   (str):   Custom additional arguments to be passed
+#                               to service-mgrd
+#
+
+. /etc/rc.subr
+
+name="service_mgrd"
+rcvar=service_mgrd_enable
+
+command="/usr/local/bin/service-mgrd"
+start_cmd="${command} -d -o /var/log/service-mgr/service-mgrd.log"
+status_cmd="${command} -e tcp://localhost:5800 status"
+stop_cmd="${command} -e tcp://localhost:5800 stop"
+
+load_rc_config $name
+
+: ${service_mgrd_enable="NO"}
+
+run_rc_command "$1"
