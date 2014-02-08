@@ -16,7 +16,7 @@
 
 set -e
 
-. /etc/rc.d/init.d/functions
+#. /etc/rc.d/init.d/functions
 
 [ -f /etc/sysconfig/service-mgr-agentd ] && . /etc/sysconfig/service-mgr-agentd
 
