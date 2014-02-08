@@ -5,6 +5,7 @@ Service Manager Agent module
 """
 
 import logging
+import platform
 
 import zmq
 
@@ -33,30 +34,22 @@ class ServiceManagerAgent(Daemon):
         while not self.time_to_die:
             socks = dict(self.zpoller.poll())
 
-            # Subscriber socket, receives new service request messages
+            # Subscriber socket, receives service request messages
             if socks.get(self.sub_socket):
                 logging.debug('Received new message on the subscriber socket')
 
-                # The routing envelope of the message is like this:
-                #
-                # Frame 1:  [ N ][...]  <- Identity of connection
-                # Frame 2:  [ 0 ][]     <- Empty delimiter frame
-                # Frame 3:  [ N ][...]  <- Data frame
-                #
-                # We keep the identity of the connection similar to a ROUTER socket,
-                # so later when we send results back to the sink the manager can
-                # forward the results properly to the clients
-                _id = self.sub_socket.recv()
-                _empty = self.sub_socket.recv()
+                topic = self.sub_socket.recv_unicode()
                 msg = self.sub_socket.recv_json()
-                
-                logging.debug('Message: %s' % msg)
+
+                logging.debug('Topic: %s', topic)
+                logging.debug('Message: %s', msg)
 
                 result = self.process_service_req(msg)
 
-                # Send back the results to the sink
-                self.sink_socket.send(_id, zmq.SNDMORE)
-                self.sink_socket.send("", zmq.SNDMORE)
+                # Add the request id to the result message,
+                # so that Service Manager publishes it to the clients
+                result['uuid'] = msg['uuid']
+
                 self.sink_socket.send_json(result)
             
             # Management socket
