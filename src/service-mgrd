@@ -126,7 +126,6 @@ Options:
                                             [default: /etc/service-mgr/service-mgrd.conf]
   -e <endpoint>, --endpoint <endpoint>      Specify the endpoint we connect to
   -o <logfile>, --output <logfile>          Specify the logfile to use
-                                            [default: /var/log/service-mgr/service-mgrd.log]
 
 """
 
@@ -134,7 +133,8 @@ Options:
 
     level = logging.DEBUG if args['--debug'] else logging.INFO
 
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - service-mgrd[%(process)s]: %(message)s',
+    logging.basicConfig(filename=args['--output'],
+                        format='%(asctime)s - %(levelname)s - service-mgrd[%(process)s]: %(message)s',
                         level=level)
 
     result = None
