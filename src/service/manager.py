@@ -117,7 +117,9 @@ class ServiceManager(Daemon):
         Creates the ServiceManager listeners
 
         """
-        # Check for required endpoints args
+        logging.debug('Creating Service Manager listeners')
+
+        # Check for required endpoint args
         required_args = (
             'frontend_endpoint',
             'backend_endpoint',
@@ -131,21 +133,21 @@ class ServiceManager(Daemon):
         for k in kwargs:
             setattr(self, k, kwargs[k])
 
-        logging.debug('Creating Service Manager listeners')
-
         self.zcontext = zmq.Context().instance()
 
         # Our Service Manager sockets
-        self.frontend_socket = self.zcontext.socket(zmq.ROUTER)
-        self.backend_socket = self.zcontext.socket(zmq.XPUB)
-        self.sink_socket = self.zcontext.socket(zmq.PULL)
-        self.mgmt_socket = self.zcontext.socket(zmq.REP)
+        self.frontend_socket   = self.zcontext.socket(zmq.ROUTER)
+        self.backend_socket    = self.zcontext.socket(zmq.XPUB)
+        self.sink_socket       = self.zcontext.socket(zmq.PULL)
+        self.mgmt_socket       = self.zcontext.socket(zmq.REP)
+        self.result_pub_socket = self.zcontext.socket(zmq.PUB)
 
         try:
             self.frontend_socket.bind(self.frontend_endpoint)
             self.backend_socket.bind(self.backend_endpoint)
             self.sink_socket.bind(self.sink_endpoint)
             self.mgmt_socket.bind(self.mgmt_endpoint)
+            self.result_pub_port = self.result_pub_socket.bind_to_random_port('tcp://*')
         except zmq.ZMQError as e:
             raise ServiceManagerException, 'Cannot bind Service Manager sockets: %s' % e
 
@@ -155,6 +157,12 @@ class ServiceManager(Daemon):
         self.zpoller.register(self.backend_socket, zmq.POLLIN)
         self.zpoller.register(self.sink_socket, zmq.POLLIN)
         self.zpoller.register(self.mgmt_socket, zmq.POLLIN)
+
+        logging.debug('Frontend socket bound to %s', self.frontend_endpoint)
+        logging.debug('Backend socket bound to %s', self.backend_endpoint)
+        logging.debug('Sink socket bound to %s', self.sink_endpoint)
+        logging.debug('Management socket bound to %s', self.mgmt_endpoint)
+        logging.debug('Result publisher socket bound to %s', 'tcp://*:' + str(self.result_pub_port))
 
     def close_listeners(self):
         """
@@ -172,5 +180,6 @@ class ServiceManager(Daemon):
         self.backend_socket.close()
         self.sink_socket.close()
         self.mgmt_socket.close()
+        self.result_pub_port.close()
 
         self.zcontext.destroy()
