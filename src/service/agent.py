@@ -142,6 +142,10 @@ class ServiceManagerAgent(Daemon):
         msg = self.mgmt_socket.recv_json()
         
         logging.debug('Message: %s' % msg)
+
+        if not isinstance(msg, dict):
+            self.mgmt_socket.send_json({ 'success': -1, 'msg': 'Request message should be in JSON format' })
+
         logging.debug('Processing management request')
 
         # Check for required message fields
