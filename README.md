@@ -8,7 +8,7 @@ The system consists of a number of components, each responsible for a specific t
 the `Service Manager` components and their purpose.
 
 | Component          | Purpose                                                            |
-|-----------------------------------------------------------------------------------------|
+|--------------------|--------------------------------------------------------------------|
 | service-mgrd       | Service Manager daemon, controls all Service Manager Agents        |
 | service-mgr-agentd | Service Manager Agent, responsible for processing service requests |
 | service-mgr-client | Client application, used for sending service requests to Agents    |
