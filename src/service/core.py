@@ -154,8 +154,8 @@ class Service(object):
         logging.debug(
             'Executing service request: %s %s %s',
             self.service_cmd,
-            cmd,
-            self.service_name
+            self.service_name,
+            cmd
         )
 
         p = subprocess.Popen(
