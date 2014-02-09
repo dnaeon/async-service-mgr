@@ -29,6 +29,15 @@ set -e
 [ - /etc/default/service-mgr-agentd ] && . /etc/default/service-mgr-agentd
 
 do_start() {
+    # Create runtime directories as well
+    if [ ! -d "/var/log/service-mgr" ]; then
+	mkdir /var/log/service-mgr
+    fi
+
+    if [ ! -d "/var/run/service-mgr" ]; then
+	mkdir /var/run/service-mgr
+    fi
+    
     ${DAEMON} -d -o ${LOGFILE} start
 }
 

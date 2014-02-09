@@ -19,6 +19,7 @@ name="service_mgrd"
 rcvar=service_mgrd_enable
 
 command="/usr/local/bin/service-mgrd"
+start_pre_cmd="install -d -o root -g wheel /var/log/service-mgr /var/run/service-mgr"
 start_cmd="${command} -d -o /var/log/service-mgr/service-mgrd.log"
 status_cmd="${command} -e tcp://localhost:5800 status"
 stop_cmd="${command} -e tcp://localhost:5800 stop"
