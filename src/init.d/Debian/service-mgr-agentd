@@ -26,7 +26,7 @@ set -e
 
 . /lib/lsb/init-functions
 
-[ - /etc/default/service-mgr-agentd ] && . /etc/default/service-mgr-agentd
+[ -f /etc/default/service-mgr-agentd ] && . /etc/default/service-mgr-agentd
 
 do_start() {
     # Create runtime directories as well
