@@ -25,6 +25,9 @@
 """
 Service Manager Client module
 
+Defines classes for sending out client requests to a
+Service Manager.
+
 """   
 
 import logging
@@ -127,6 +130,11 @@ class ServiceManagerClient(object):
         """
         Subscribes to an endpoint for messages with specific topic
 
+        Once we acquire a service request id from Service Manager we
+        would want to get our results back. This method subscribes to the
+        Service Manager Result Publisher endpoint and waits for any messages
+        with the unique service request id as the topic.
+
         Args:
             endpoint    (str): Endpoint we subscribe to
             topic       (str): The topic we subscribe to
@@ -157,7 +165,7 @@ class ServiceManagerClient(object):
         result = []
 
         while (time() - self.wait_start) <= self.wait_time:
-            socks = dict(self.zpoller.poll(100))
+            socks = dict(self.zpoller.poll(50))
 
             if socks.get(self.zclient):
                 _topic = self.zclient.recv()
