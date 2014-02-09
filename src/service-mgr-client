@@ -27,6 +27,9 @@
 """
 Service Manager Client application
 
+The client application of Service Manager is used for
+sending out service requests to a Service Manager daemon.
+
 """
 
 import json
@@ -46,18 +49,19 @@ Usage:
 Options:
   -h, --help                             Display this usage info
   -v, --version                          Display version and exit
-  -r <retries>, --retries <retries>      Number of times to retry if a request times out 
+  -r <retries>, --retries <retries>      Number of times to retry if a request times out
                                          [default: 3]
   -t <timeout>, --timeout <timeout>      Timeout after that period of milliseconds 
                                          [default: 1000]
-  -w <waittime>, --wait-time <waittime>  Wait that number of seconds from the Result Publisher
+  -w <waittime>, --wait-time <waittime>  Wait that number of seconds for results
+                                         from the Service Manager Result Publisher
                                          [default: 0.1]
-  -e <endpoint>, --endpoint <endpoint>   Endpoint of Service Manager to send the request to
-                                         [default: tcp://localhost:5500]
   -D, --debug                            Run Service Manager Client in debug mode
-  -T <topic>, --topic <topic>            Topic of the message
-  -c <cmd>, --cmd <cmd>                  Service command, e.g. 'service.status', 'service.stop', etc.
-  -s <service>, --service <service>      Name of the service
+  -e <endpoint>, --endpoint <endpoint>   Endpoint of the Service Manager to send the request to
+                                         [default: tcp://localhost:5500]
+  -T <topic>, --topic <topic>            Topic of the message to use
+  -c <cmd>, --cmd <cmd>                  Service command, e.g. 'start', 'status', 'stop', etc.
+  -s <service>, --service <service>      Name of the service to perform the operation on
 
 """
 
@@ -101,7 +105,7 @@ Options:
         endpoint=publisher,
         topic=result['uuid'],
         wait_time=float(args['--wait-time'])
-    ) 
+    )
 
     print json.dumps(result, indent=4)
 

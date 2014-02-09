@@ -27,6 +27,10 @@
 """
 Service Manager daemon
 
+The Service Manager is the one that Service Manager Agents connect to.
+It is responsible for dispatching service request message to any
+connected Agents and collect results from the service request operations.
+
 """
 
 import json

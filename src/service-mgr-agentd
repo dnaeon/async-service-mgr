@@ -27,6 +27,15 @@
 """
 Service Manager Agent daemon
 
+The Service Manager Agents are responsible for processing any
+user service request operations. 
+
+The Service Manager Agents connect to a Service Manager from where
+they receive user service requests.
+
+Once a request is processed it is the Service Manager Agent's 
+responsibility for sending any results to the Service Manager's sink.
+
 """
 
 import json
