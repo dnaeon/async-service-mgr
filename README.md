@@ -323,9 +323,9 @@ Okay, let's see how `cron(8)` is on our Linux nodes. The message topic we use th
 		}
 	]
 
-From the output above see that one of our Linux nodes reported `cron: unrecognized service`.
+From the output above we notice that one of our Linux nodes reported `cron: unrecognized service`.
 
-Under RHEL/CentOS systems the `cron(8)` service name is `crond` unline `cron` as found under Debian and FreeBSD systems.
+Under RHEL/CentOS systems the `cron(8)` service name is `crond` unlike `cron` as found under Debian and FreeBSD systems.
 
 Okay, lets send this time a request directly to our CentOS system only. The message topic we use this time is `centos-dev` -- the node's hostname.
 
@@ -414,9 +414,9 @@ Let's start SSH back, so we can login to the system again.
 		}
 	]
 
-Great, `sshd(8)` is back online and we can login to it.
+Great, `sshd(8)` is back online and we can again login to the system.
 
-These examples are just one of the many where `Service Manager` can really help us in managing our cluster services.
+These examples are just one of the many where `Service Manager` can help us in managing our cluster services.
 
 ## Handling slow services and high latency issues
 
@@ -433,9 +433,9 @@ by using the `-w` switch of `service-mgr-client`, e.g.
 
 	$ service-mgr-client -w 5 -e tcp://localhost:5500 -T FreeBSD -c status -s sshd
 
-This would cause the `Service Manager Client` to wait for 5 seconds for any results to be published
+This would cause the `Service Manager Client` to wait for 5 seconds at most for any results to be published
 on the `Result Publisher` socket of `Service Manager`. After that period it would simply return and
-display the results that were published.
+display the results that it received, if any.
 
 ## Bugs
 
