@@ -52,12 +52,15 @@ class ServiceManager(Daemon):
         Main daemon method 
 
         """
+        # A flag to indicate that our daemon should terminate
         self.time_to_die = False
 
+        # Create the Service Manager listeners
         self.create_listeners(**kwargs)
 
         logging.info('Service Manager started')
 
+        # Main daemon loop
         while not self.time_to_die:
             socks = dict(self.zpoller.poll())
 
@@ -157,16 +160,38 @@ class ServiceManager(Daemon):
         """
         Processes a message on the frontend socket
 
+        The routing envelope of the message looks like this:
+
+            Frame 1:  [ N ][...]  <- Identity of connection
+            Frame 2:  [ 0 ][]     <- Empty delimiter frame
+            Frame 3:  [ N ][...]  <- Data frame
+
+        The frontend socket of the Service Manager receives new
+        service request commands from clients and prepares a 
+        unique service request id for the clients.
+
+        It is up to the client to subscribe to the Service Manager
+        Result Publisher endpoint for receiving any results.
+
+        Example client message on the frontend socket could look like this:
+        
+            {
+                "cmd":     "status",
+                "service": "sshd",
+                "topic":   "FreeBSD",
+            }
+
+        The Service Manager's frontend socket replies to the client with a
+        unique service request id, so that clients can subscribe for results.
+        
+            {
+                "uuid": "<unique-service-request-id>",
+                "port": "<result-publisher-port>",
+            }
+
         """
         logging.debug('Received message on the frontend socket')
 
-        #
-        # The routing envelope looks on the frontend socket is like this:
-        #
-        # Frame 1:  [ N ][...]  <- Identity of connection
-        # Frame 2:  [ 0 ][]     <- Empty delimiter frame
-        # Frame 3:  [ N ][...]  <- Data frame
-        #
         _id    = self.frontend_socket.recv()
         _empty = self.frontend_socket.recv()
         msg    = self.frontend_socket.recv_json()
@@ -206,6 +231,9 @@ class ServiceManager(Daemon):
         """
         Processes a message on the backend socket
 
+        The backend socket receives messages from Agents and contains
+        information about whether an Agent subscribes or unsubscribes.
+
         """
         logging.debug('Received message on the backend socket')
 
@@ -220,6 +248,13 @@ class ServiceManager(Daemon):
     def process_sink_msg(self):
         """
         Processes a message on the sink socket
+
+        The Service Manager sink socket receives the results
+        from a service request operation from the Service Manager Agents.
+
+        The received message also contains the unique service request id,
+        which is later used as the topic when results are published on the
+        Result Publisher socket.
 
         """
         logging.debug('Received message on the sink socket')
@@ -236,6 +271,18 @@ class ServiceManager(Daemon):
     def process_mgmt_msg(self):
         """
         Processes a message on the management socket
+
+        The management socket of Service Manager is used for
+        processing management tasks, e.g. getting status information or
+        initiating the shutdown sequence of Service Manager.
+
+        The message should be in JSON format.
+
+        Example management message could look like this:
+        
+            {
+                "cmd": "manager.status"
+            }
 
         """
         logging.debug('Received message on the management socket')
@@ -268,6 +315,9 @@ class ServiceManager(Daemon):
         """
         Get status information about the Service Manager
 
+        Args:
+            msg (dict): The original management message (ignored)
+
         """
         result = {
             'success': 0,
@@ -288,6 +338,9 @@ class ServiceManager(Daemon):
     def manager_shutdown(self, msg):
         """
         Initiates the Service Manager shutdown sequence
+
+        Args:
+            msg (dict): The original management message received (ignored)
 
         """
         logging.info('Service Manager is shutting down')
