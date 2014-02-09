@@ -48,12 +48,19 @@ class ServiceManagerAgent(Daemon):
 
     """
     def run(self, **kwargs):
+        """
+        Main daemon method
+
+        """
+        # A flag to indicate whether our daemon should be stopped
         self.time_to_die = False
 
+        # Create the Service Manager Agent sockets
         self.create_sockets(**kwargs)
 
         logging.info('Service Manager Agent started')
 
+        # Main daemon loop
         while not self.time_to_die:
             socks = dict(self.zpoller.poll())
 
@@ -61,7 +68,7 @@ class ServiceManagerAgent(Daemon):
             if socks.get(self.sub_socket):
                 self.process_sub_msg()
 
-            # Management socket
+            # Management socket, receives management messages
             if socks.get(self.mgmt_socket):
                 self.process_mgmt_msg()
 
@@ -138,6 +145,30 @@ class ServiceManagerAgent(Daemon):
         """
         Processes a message on the subscriber socket
 
+        The message we receive on the subscriber socket:
+
+            Frame 1: [ N ][...] <- Topic of the message
+            Frame 2: [ N ][...] <- Data frame
+
+        The message we receive also contains the unique request id,
+        which is later included in the result message before pushing
+        results back to the Service Manager sink.
+
+        The unique service request id is included in the result message,
+        so that Service Manager publishes the results with the request id
+        to the Result Publisher socket.
+
+        The message we receive on the subscriber socket should be in
+        JSON format. An example message received on the socket could
+        look like this:
+
+            {
+                "cmd":     "status",
+                "service": "sshd",
+                "topic":   "FreeBSD",
+                "uuid":    "<unique-client-request-id>",
+            }
+
         """
         logging.debug('Received new message on the subscriber socket')
 
@@ -149,7 +180,7 @@ class ServiceManagerAgent(Daemon):
 
         result = self.process_service_req(msg)
                 
-        # Add the request id to the result message,
+        # Add the unique request id to the result message,
         # so that Service Manager publishes it to the clients
         result['uuid'] = msg['uuid']
 
@@ -158,6 +189,17 @@ class ServiceManagerAgent(Daemon):
     def process_mgmt_msg(self):
         """
         Processes a message on the management socket
+
+        This method is used for processing tasks which are
+        management related, e.g. getting status information
+        from the Service Manager Agent or shutting down the Agent.
+
+        The message should be in JSON format and an example
+        management message could look like this:
+
+            {
+                "cmd": "agent.status",
+            }
 
         """
         logging.debug('Received new message on the management socket')
@@ -190,7 +232,15 @@ class ServiceManagerAgent(Daemon):
 
     def process_service_req(self, msg):
         """
-        Processes a service request 
+        Processes a service request
+
+        Executes the user service(8) request returns the results.
+
+        Args:
+            msg (dict): The message containing the service request details
+
+        Returns:
+            The result from executing the service request operation
 
         """
         logging.debug('Processing service request')
@@ -214,6 +264,9 @@ class ServiceManagerAgent(Daemon):
         """
         Get status information about the Service Manager Agent
 
+        Args:
+            msg (dict): The original message as received on mgmt socket (ignored)
+
         """
         result = {
             'success': 0,
@@ -232,6 +285,9 @@ class ServiceManagerAgent(Daemon):
     def agent_shutdown(self, msg):
         """
         Initiates the Service Manager Agent shutdown sequence
+
+        Args:
+            msg (dict): The original message as received on the mgmt socket (ignored)
 
         """
         logging.info('Service Manager Agent is shutting down')
