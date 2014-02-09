@@ -1,2 +1,2 @@
 __name__ = 'service'
-__all__ = [ 'core', 'daemon', 'client' ]
+__all__ = [ 'core', 'daemon', 'client', 'agent', 'manager' ]
