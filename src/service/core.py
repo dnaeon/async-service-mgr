@@ -144,12 +144,24 @@ class Service(object):
         """
         Execute a service command request
 
-        """
-        logging.debug('Executing service request: %s %s %s', self.service_cmd, cmd, self.service_name)
+        Args:
+            cmd (str): The command to pass to service(8)
 
-        p = subprocess.Popen([self.service_cmd, self.service_name, cmd],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE
+        Returns:
+            The result of the service(8) operation
+
+        """
+        logging.debug(
+            'Executing service request: %s %s %s',
+            self.service_cmd,
+            cmd,
+            self.service_name
+        )
+
+        p = subprocess.Popen(
+            [self.service_cmd, self.service_name, cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
 
         p.wait()
