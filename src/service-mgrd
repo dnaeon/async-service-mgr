@@ -115,10 +115,12 @@ def parse_conf(path):
     parser = ConfigParser.ConfigParser()
     parser.read(path)
 
-    required_opts = ('frontend_endpoint',
-                     'backend_endpoint',
-                     'sink_endpoint',
-                     'mgmt_endpoint')
+    required_opts = (
+        'frontend_endpoint',
+        'backend_endpoint',
+        'sink_endpoint',
+        'mgmt_endpoint'
+    )
 
     if not all(parser.has_option('Default', opt) for opt in required_opts):
         raise SystemExit, 'Missing or no configuration options in %s' % path
