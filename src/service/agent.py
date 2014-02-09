@@ -97,8 +97,15 @@ class ServiceManagerAgent(Daemon):
 
         # Service Manager Subscriber socket
         # Subscribe to every topic defined in the conf file.
+        #
         # Also subscribe to topics related to the platform on
-        # which our Agent runs, e.g. FreeBSD, Linux, etc.
+        # which our Agent runs, e.g. FreeBSD, Linux, etc., and
+        # the name of the node the Agent runs on.
+        # 
+        # Every Service Manager Agent also subscribes
+        # to the special "any" topic, which is used for
+        # broadcasting messages to all Agents
+        #
         self.zcontext = zmq.Context().instance()
         self.sub_socket = self.zcontext.socket(zmq.SUB)
 
@@ -106,6 +113,7 @@ class ServiceManagerAgent(Daemon):
             for eachTopic in self.topics:
                 self.sub_socket.setsockopt(zmq.SUBSCRIBE, eachTopic)
 
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, "any")
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, platform.system())
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, platform.node())
         
