@@ -128,6 +128,7 @@ class Service(object):
         self.system = platform.system()
         self.node = platform.node()
         self.dist, self.dist_version, self.dist_id = platform.dist()
+        self.version = platform.version()
 
         linux_service_cmds = {
             'redhat': '/sbin/service',
@@ -174,6 +175,8 @@ class Service(object):
                 'returncode':   p.returncode,
                 'stdout':       p.stdout.read(),
                 'stderr':       p.stderr.read(),
+                'system':       self.system,
+                'version':      self.version,
             }
         }
 
