@@ -121,25 +121,22 @@ class Service(object):
         Initializes a new Service object
         
         Args:
-            name (str): The name of the service
+            name (str): The name of the service 
 
         """
         self.service_name = name
         self.system = platform.system()
         self.node = platform.node()
-        self.dist, self.dist_version, self.dist_id = platform.dist()
         self.version = platform.version()
 
-        linux_service_cmds = {
-            'redhat': '/sbin/service',
-            'centos': '/sbin/service',
-            'debian': '/usr/sbin/service',
-        }
+        # Try to determine the path to the local service(8) manager
+        p = subprocess.Popen(
+            ['which', 'service'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
-        if self.system == 'FreeBSD':
-            self.service_cmd = '/usr/sbin/service'
-        elif self.system == 'Linux':
-            self.service_cmd = linux_service_cmds.get(self.dist, '/usr/sbin/service')
+        self.service_cmd = p.stdout.read().strip()
 
     def run_cmd(self, cmd):
         """
@@ -158,6 +155,13 @@ class Service(object):
             self.service_name,
             cmd
         )
+
+        if not self.service_cmd:
+            return {
+                'success': -1,
+                'msg': 'Unable to determine location to service(8)',
+                'node': self.node
+            }
 
         p = subprocess.Popen(
             [self.service_cmd, self.service_name, cmd],
