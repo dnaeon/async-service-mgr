@@ -177,8 +177,8 @@ class Service(object):
                 'node':         self.node,
                 'service':      self.service_name,
                 'returncode':   p.returncode,
-                'stdout':       p.stdout.read(),
-                'stderr':       p.stderr.read(),
+                'stdout':       p.stdout.read().split('\n'),
+                'stderr':       p.stderr.read().split('\n'),
                 'system':       self.system,
                 'version':      self.version,
             }
