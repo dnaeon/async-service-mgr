@@ -110,7 +110,7 @@ class ServiceManagerAgent(Daemon):
         self.sub_socket = self.zcontext.socket(zmq.SUB)
 
         if hasattr(self, 'topics'):
-            for eachTopic in self.topics:
+            for eachTopic in self.topics.split(','):
                 self.sub_socket.setsockopt(zmq.SUBSCRIBE, eachTopic)
 
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, "any")
